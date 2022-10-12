@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -22,9 +23,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
-
-    FirebaseFirestore db = FirebaseFirestore.getInstance();
     // Instanciar Firebase
+    FirebaseFirestore db = FirebaseFirestore.getInstance();
+    String idCustomer; // Variable que contendrá el id de cada cliente
+
     EditText ident, fullname, email, password;
 
     @Override
@@ -54,6 +56,37 @@ public class MainActivity extends AppCompatActivity {
                 saveCustomer(ident.getText().toString(), fullname.getText().toString(), email.getText().toString(), password.getText().toString());
             }
         });
+
+        btnedit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                editarCustomer(ident.getText().toString(), fullname.getText().toString(), email.getText().toString(), password.getText().toString());
+            }
+        });
+    }
+
+    private void editarCustomer(String sident, String sfuillname, String semail, String spassword) {
+        Map<String, Object> mcustomer = new HashMap<>();
+        mcustomer.put("Ident", sident);
+        mcustomer.put("Fullname", sfuillname);
+        mcustomer.put("Email", semail);
+        mcustomer.put("Password", spassword);
+
+        db.collection("customer").document(idCustomer)
+                .set(mcustomer)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        //Log.d("cliente", "DocumentSnapshot successfully written!");
+                        Toast.makeText(MainActivity.this,"Cliente actualizado correctmente...",Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w("cliente", "Error writing document", e);
+                    }
+                });
     }
 
     private void searchCustomer(String sident) {
@@ -64,8 +97,10 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onComplete(@NonNull Task<QuerySnapshot> task) {
                         if (task.isSuccessful()) {
-                            if (!task.getResult().isEmpty()) {
+                            if (!task.getResult().isEmpty()) { // Si encontró el documento
                                 for (QueryDocumentSnapshot document : task.getResult()) {
+                                    idCustomer = document.getId();
+                                    Toast.makeText(getApplicationContext(),"ID customer: " + idCustomer, Toast.LENGTH_LONG).show();
                                     fullname.setText(document.getString("Fullname"));
                                     email.setText(document.getString("Email"));
                                 }
@@ -80,33 +115,52 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void saveCustomer(String sident, String sfullname, String semail, String spassword) {
-        Map<String, Object> customer = new HashMap<>();
-        customer.put("Ident", sident);
-        customer.put("Fullname", sfullname);
-        customer.put("Email", semail);
-        customer.put("Password", spassword);
-
+        // Buscar la id entificación del cliente nuevo
         db.collection("customer")
-                .add(customer)
-                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                .whereEqualTo("Ident", sident)
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
                     @Override
-                    public void onSuccess(DocumentReference documentReference) {
-                        Toast.makeText(getApplicationContext(), "Cliente agregado con éxito...", Toast.LENGTH_SHORT).show();
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            if (task.getResult().isEmpty()) { // Si no encuentra el documento
+                                // Guardar los datos del cliente (customer)
+                                Map<String, Object> customer = new HashMap<>(); // Tabla cursor
+                                customer.put("Ident", sident);
+                                customer.put("Fullname", sfullname);
+                                customer.put("Email", semail);
+                                customer.put("Password", spassword);
 
-                        //Limpiar las cajas de texto
-                        ident.setText("");
-                        fullname.setText("");
-                        email.setText("");
-                        password.setText("");
+                                db.collection("customer")
+                                        .add(customer)
+                                        .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                                            @Override
+                                            public void onSuccess(DocumentReference documentReference) {
+                                                Toast.makeText(getApplicationContext(), "Cliente agregado con éxito...", Toast.LENGTH_SHORT).show();
 
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Toast.makeText(getApplicationContext(), "Error! el cliente no se agregó...", Toast.LENGTH_SHORT).show();
+                                                //Limpiar las cajas de texto
+                                                ident.setText("");
+                                                fullname.setText("");
+                                                email.setText("");
+                                                password.setText("");
+
+                                            }
+                                        })
+                                        .addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception e) {
+                                                Toast.makeText(getApplicationContext(), "Error! el cliente no se agregó...", Toast.LENGTH_SHORT).show();
+                                            }
+                                        });
+                            }
+                            else
+                            {
+                                Toast.makeText(getApplicationContext(),"El Id del cliente ya existe, inténtelo con otro",Toast.LENGTH_SHORT).show();
+                            }
+                        }
                     }
                 });
+
 
     }
 }
