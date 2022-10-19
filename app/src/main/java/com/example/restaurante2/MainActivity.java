@@ -1,8 +1,11 @@
 package com.example.restaurante2;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.DialogInterface;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -63,6 +66,57 @@ public class MainActivity extends AppCompatActivity {
                 editarCustomer(ident.getText().toString(), fullname.getText().toString(), email.getText().toString(), password.getText().toString());
             }
         });
+        
+        btndelete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Confirmación de borrado
+                AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(MainActivity.this);
+                alertDialogBuilder.setMessage("¿ Está seguro de eliminar el cliente con Id: " + ident.getText().toString() + " ?");
+                alertDialogBuilder.setPositiveButton("Sí",
+                    new DialogInterface.OnClickListener() {
+
+                        @Override
+                        public void onClick(DialogInterface arg0, int arg1) {
+                            // Se eliminará el cliente con el id respectivo
+                            db.collection("customer").document(idCustomer)
+                                    .delete()
+                                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                        @Override
+                                        public void onSuccess(Void aVoid) {
+                                            Toast.makeText(MainActivity.this,"Cliente borrado correctamente...",Toast.LENGTH_SHORT).show();
+
+                                            //Limpiar las cajas de texto
+                                            ident.setText("");
+                                            fullname.setText("");
+                                            email.setText("");
+                                            password.setText("");
+                                            ident.requestFocus(); //Enviar el foco al ident
+                                        }
+                                    })
+                                    .addOnFailureListener(new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            Toast.makeText(getApplicationContext(),"Error: " + e.getMessage(),Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                        }
+                    });
+
+                alertDialogBuilder.setNegativeButton("No",
+                    new DialogInterface.OnClickListener() {
+
+                        @Override
+                        public void onClick(DialogInterface arg0, int arg1) {
+
+                        }
+                    });
+
+                AlertDialog alertDialog = alertDialogBuilder.create();
+                alertDialog.show();
+            }
+        });
+
     }
 
     private void editarCustomer(String sident, String sfuillname, String semail, String spassword) {
@@ -77,14 +131,20 @@ public class MainActivity extends AppCompatActivity {
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void aVoid) {
-                        //Log.d("cliente", "DocumentSnapshot successfully written!");
                         Toast.makeText(MainActivity.this,"Cliente actualizado correctmente...",Toast.LENGTH_SHORT).show();
+
+                        // Vaciar las cajas de texto
+                        ident.setText("");
+                        fullname.setText("");
+                        email.setText("");
+                        password.setText("");
+                        ident.requestFocus(); //Enviar el foco al ident
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        Log.w("cliente", "Error writing document", e);
+                        Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 });
     }
@@ -143,6 +203,7 @@ public class MainActivity extends AppCompatActivity {
                                                 fullname.setText("");
                                                 email.setText("");
                                                 password.setText("");
+                                                ident.requestFocus(); //Enviar el foco al ident
 
                                             }
                                         })
